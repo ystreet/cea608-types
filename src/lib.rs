@@ -179,7 +179,7 @@ impl Cea608State {
                     _ => {
                         if let Some(char) = code[0].char() {
                             Cea608::Text(Text {
-                                needs_backspace: true,
+                                needs_backspace: code[0].needs_backspace(),
                                 char1: Some(char),
                                 char2: None,
                                 channel,

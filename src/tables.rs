@@ -42,23 +42,29 @@ impl Channel {
     }
 }
 
+/// A control code
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 // must be ordered the same as the byte values
 // These codes start with 0x11 (channel 1, odd-parity: 0x91) or 0x19 (channel 2, odd-parity: 0x19)
 pub struct ControlCode {
-    channel: Channel,
-    control: Control,
+    /// The channel
+    pub channel: Channel,
+    /// The control code
+    pub control: Control,
 }
 
 impl ControlCode {
+    /// Construct a new [`ControlCode`]
     pub fn new(channel: Channel, control: Control) -> Self {
         Self { channel, control }
     }
 
+    /// The [`Channel`] for this [`ControlCode`]
     pub fn channel(&self) -> Channel {
         self.channel
     }
 
+    /// The [`Control`] code for this [`ControlCode`]
     pub fn code(&self) -> Control {
         self.control
     }
@@ -1037,6 +1043,90 @@ impl Code {
                 })
             }
         })
+    }
+
+    /// Whether or not this code requires there to have a backspace prepended for correct display
+    pub fn needs_backspace(&self) -> bool {
+        let Code::Control(ControlCode {
+            channel: _,
+            control,
+        }) = self
+        else {
+            return false;
+        };
+        matches!(
+            control,
+            Control::MidRow(_)
+            | Control::LatinCapitalAWithAcute
+            | Control::LatinCapitalEWithAcute
+            | Control::LatinCapitalOWithAcute
+            | Control::LatinCapitalUWithAcute
+            | Control::LatinCapitalUWithDiaeseresis
+            | Control::LatinLowerUWithDiaeseresis
+            | Control::OpeningSingleQuote
+            | Control::InvertedExclamationMark
+            // table 6
+            | Control::Asterisk
+            | Control::SingleOpenQuote
+            | Control::EmDash
+            | Control::CopyrightSign
+            | Control::ServiceMarkSign
+            | Control::RoundBullet
+            | Control::DoubleOpenQuote
+            | Control::DoubleCloseQuote
+            // table 7
+            | Control::LatinCapitalAWithGrave
+            | Control::LatinCapitalAWithCircumflex
+            | Control::LatinCapitalCWithCedilla
+            | Control::LatinCapitalEWithGrave
+            | Control::LatinCapitalEWithCircumflex
+            | Control::LatinCapitalEWithDiaeresis
+            | Control::LatinLowerEWithDiaeresis
+            | Control::LatinCapitalIWithCircumflex
+            | Control::LatinCapitalIWithDiaeresis
+            | Control::LatinLowerIWithDiaeresis
+            | Control::LatinCapitalOWithCircumflex
+            | Control::LatinCapitalUWithGrave
+            | Control::LatinLowerUWithGrave
+            | Control::LatinCapitalUWithCircumflex
+            | Control::OpeningGuillemets
+            | Control::ClosingGuillemets
+            // table 8
+            | Control::LatinCapitalAWithTilde
+            | Control::LatinLowerAWithTilde
+            | Control::LatinCapitalIWithAcute
+            | Control::LatinCapitalIWithGrave
+            | Control::LatinLowerIWithGrave
+            | Control::LatinCapitalOWithGrave
+            | Control::LatinLowerOWithGrave
+            | Control::LatinCapitalOWithTilde
+            | Control::LatinLowerOWithTilde
+            | Control::OpeningBrace
+            | Control::ClosingBrace
+            | Control::ReverseSolidus
+            | Control::Caret
+            | Control::Underbar
+            | Control::Pipe
+            | Control::Tilde
+            // table 9
+            | Control::LatinCapitalAWithDiaeresis
+            | Control::LatinLowerAWithDiaeresis
+            | Control::LatinCapitalOWithDiaeresis
+            | Control::LatinLowerOWithDiaeresis
+            | Control::LatinLowerSharpS
+            | Control::YenSign
+            | Control::GeneralCurrencySign
+            | Control::VerticalBar
+            // table 10
+            | Control::LatinCapitalAWithRingAbove
+            | Control::LatinLowerAWithRingAbove
+            | Control::LatinCapitalOWithStroke
+            | Control::LatinLowerOWithStroke
+            | Control::UpperLeftBorder
+            | Control::UpperRightBorder
+            | Control::LowerLeftBorder
+            | Control::LowerRightBorder
+        )
     }
 }
 
