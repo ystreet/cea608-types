@@ -95,25 +95,66 @@ impl ControlCode {
     }
 }
 
-/// A mid-row change
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+enum MidRowColor {
+    Color(Color),
+    Italics,
+}
+
+/// A mid-row change command
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct MidRow {
-    color: Color,
+    color: MidRowColor,
     underline: bool,
 }
 
 impl MidRow {
+    /// Construct a new mid row command signalling a color
+    pub fn new_color(color: Color, underline: bool) -> Self {
+        Self {
+            color: MidRowColor::Color(color),
+            underline,
+        }
+    }
+
+    /// Construct a new mid row command signalling italics
+    pub fn new_italics(underline: bool) -> Self {
+        Self {
+            color: MidRowColor::Italics,
+            underline,
+        }
+    }
+
+    /// The color of this mid row command
+    pub fn color(&self) -> Option<Color> {
+        if let MidRowColor::Color(color) = self.color {
+            Some(color)
+        } else {
+            None
+        }
+    }
+
+    /// Whether underline is signalled with this mid row command
+    pub fn underline(&self) -> bool {
+        self.underline
+    }
+
+    /// Whether italics is signalled with this mid row command
+    pub fn italics(&self) -> bool {
+        matches!(self.color, MidRowColor::Italics)
+    }
+
     fn to_bytes(self) -> [u8; 2] {
         let underline = if self.underline { 0x01 } else { 0x0 };
         let color = match self.color {
-            Color::White => 0x20,
-            Color::Green => 0x22,
-            Color::Blue => 0x24,
-            Color::Cyan => 0x26,
-            Color::Red => 0x28,
-            Color::Yellow => 0x2a,
-            Color::Magenta => 0x2c,
-            Color::WhiteItalics => 0x2e,
+            MidRowColor::Color(Color::White) => 0x20,
+            MidRowColor::Color(Color::Green) => 0x22,
+            MidRowColor::Color(Color::Blue) => 0x24,
+            MidRowColor::Color(Color::Cyan) => 0x26,
+            MidRowColor::Color(Color::Red) => 0x28,
+            MidRowColor::Color(Color::Yellow) => 0x2a,
+            MidRowColor::Color(Color::Magenta) => 0x2c,
+            MidRowColor::Italics => 0x2e,
         };
         [0x11, color + underline]
     }
@@ -129,7 +170,6 @@ pub enum Color {
     Red,
     Yellow,
     Magenta,
-    WhiteItalics,
 }
 
 /// Enum representing control commands
@@ -255,6 +295,60 @@ pub struct PreambleAddressCode {
 }
 
 impl PreambleAddressCode {
+    /// Construct a new preamble
+    pub fn new(base_row: u8, underline: bool, code: PreambleType) -> Self {
+        Self {
+            row: base_row,
+            underline,
+            ty: code,
+        }
+    }
+
+    /// The row specified in this preamble
+    pub fn row(&self) -> u8 {
+        self.row
+    }
+
+    /// The column specified in this preamble
+    pub fn column(&self) -> u8 {
+        match self.ty {
+            PreambleType::Indent0 => 0,
+            PreambleType::Indent4 => 4,
+            PreambleType::Indent8 => 8,
+            PreambleType::Indent12 => 12,
+            PreambleType::Indent16 => 16,
+            PreambleType::Indent20 => 20,
+            PreambleType::Indent24 => 24,
+            PreambleType::Indent28 => 28,
+            _ => 0,
+        }
+    }
+
+    /// Whether underline is signaled in this preamble
+    pub fn underline(&self) -> bool {
+        self.underline
+    }
+
+    /// The complete preamble code
+    pub fn code(&self) -> PreambleType {
+        self.ty
+    }
+
+    /// Whether italics is signaled in this preamble
+    pub fn italics(&self) -> bool {
+        matches!(self.ty, PreambleType::WhiteItalics)
+    }
+
+    /// The color of this preamble
+    pub fn color(&self) -> Color {
+        if let PreambleType::Color(color) = self.ty {
+            color
+        } else {
+            // all indents assign white as the color
+            Color::White
+        }
+    }
+
     fn to_bytes(self) -> [u8; 2] {
         let underline = if self.underline { 0x1 } else { 0x0 };
         let (row0, row1) = match self.row {
@@ -283,7 +377,7 @@ impl PreambleAddressCode {
             PreambleType::Color(Color::Red) => 0x08,
             PreambleType::Color(Color::Yellow) => 0x0a,
             PreambleType::Color(Color::Magenta) => 0x0c,
-            PreambleType::Color(Color::WhiteItalics) => 0x0e,
+            PreambleType::WhiteItalics => 0x0e,
             PreambleType::Indent0 => 0x10,
             PreambleType::Indent4 => 0x12,
             PreambleType::Indent8 => 0x14,
@@ -301,6 +395,7 @@ impl PreambleAddressCode {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum PreambleType {
     Color(Color),
+    WhiteItalics,
     Indent0,
     Indent4,
     Indent8,
@@ -710,35 +805,35 @@ fn parse_control_code(data: [u8; 2]) -> ControlCode {
         channel: Channel(channel == 0),
         control: match (data[0] & !0x08, data[1]) {
             (0x11, 0x20 | 0x21) => Control::MidRow(MidRow {
-                color: Color::White,
+                color: MidRowColor::Color(Color::White),
                 underline,
             }),
             (0x11, 0x22 | 0x23) => Control::MidRow(MidRow {
-                color: Color::Green,
+                color: MidRowColor::Color(Color::Green),
                 underline,
             }),
             (0x11, 0x24 | 0x25) => Control::MidRow(MidRow {
-                color: Color::Blue,
+                color: MidRowColor::Color(Color::Blue),
                 underline,
             }),
             (0x11, 0x26 | 0x27) => Control::MidRow(MidRow {
-                color: Color::Cyan,
+                color: MidRowColor::Color(Color::Cyan),
                 underline,
             }),
             (0x11, 0x28 | 0x29) => Control::MidRow(MidRow {
-                color: Color::Red,
+                color: MidRowColor::Color(Color::Red),
                 underline,
             }),
             (0x11, 0x2a | 0x2b) => Control::MidRow(MidRow {
-                color: Color::Yellow,
+                color: MidRowColor::Color(Color::Yellow),
                 underline,
             }),
             (0x11, 0x2c | 0x2d) => Control::MidRow(MidRow {
-                color: Color::Magenta,
+                color: MidRowColor::Color(Color::Magenta),
                 underline,
             }),
             (0x11, 0x2e | 0x2f) => Control::MidRow(MidRow {
-                color: Color::WhiteItalics,
+                color: MidRowColor::Italics,
                 underline,
             }),
             (0x10..=0x19, 0x20..=0x3f) => {
@@ -789,7 +884,7 @@ fn parse_preamble(byte0: u8, byte1: u8) -> Option<PreambleAddressCode> {
         0x08 => PreambleType::Color(Color::Red),
         0x0a => PreambleType::Color(Color::Yellow),
         0x0c => PreambleType::Color(Color::Magenta),
-        0x0e => PreambleType::Color(Color::WhiteItalics),
+        0x0e => PreambleType::WhiteItalics,
         0x10 => PreambleType::Indent0,
         0x12 => PreambleType::Indent4,
         0x14 => PreambleType::Indent8,
@@ -1021,7 +1116,7 @@ mod test {
             PreambleType::Color(Color::Red),
             PreambleType::Color(Color::Yellow),
             PreambleType::Color(Color::Magenta),
-            PreambleType::Color(Color::WhiteItalics),
+            PreambleType::WhiteItalics,
             PreambleType::Indent0,
             PreambleType::Indent4,
             PreambleType::Indent8,
@@ -1059,14 +1154,14 @@ mod test {
     fn midrow_to_from_bytes() {
         test_init_log();
         let colors = [
-            Color::White,
-            Color::Green,
-            Color::Blue,
-            Color::Cyan,
-            Color::Red,
-            Color::Yellow,
-            Color::Magenta,
-            Color::WhiteItalics,
+            MidRowColor::Color(Color::White),
+            MidRowColor::Color(Color::Green),
+            MidRowColor::Color(Color::Blue),
+            MidRowColor::Color(Color::Cyan),
+            MidRowColor::Color(Color::Red),
+            MidRowColor::Color(Color::Yellow),
+            MidRowColor::Color(Color::Magenta),
+            MidRowColor::Italics,
         ];
         for underline in [true, false] {
             for color in colors {
