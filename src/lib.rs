@@ -55,6 +55,7 @@ impl From<tables::CodeError> for ParserError {
     }
 }
 
+/// A CEA-08 presentation mode
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Mode {
     PopOn,
@@ -64,29 +65,47 @@ pub enum Mode {
     RollUp4,
 }
 
+/// Text information
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct Text {
+    /// Optional character 1
     pub char1: Option<char>,
+    /// Optional character 2
     pub char2: Option<char>,
+    /// The last channel received
     pub channel: Channel,
 }
 
+/// CEA-08 information
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Cea608 {
+    /// Text
     Text(Text),
+    /// The channel is changing (or resending) mode
     NewMode(Channel, Mode),
+    /// Erase the currently displayed window contents
     EraseDisplay(Channel),
+    /// Erase the undisplayed window contents
     EraseNonDisplay(Channel),
+    /// A carriage return was received
     CarriageReturn(Channel),
+    /// A backspace was received
     Backspace(Channel),
+    /// An end of caption was received.  In Pop-On mode, swap the undisplayed and displayed window
+    /// contents
     EndOfCaption(Channel),
+    /// Offset the cursor
     TabOffset(Channel, u8),
+    /// Delete characters from the current cursor position to the end of the row
     DeleteToEndOfRow(Channel),
+    /// A preamble was received
     Preamble(Channel, PreambleAddressCode),
+    /// A mid-row was received
     MidRowChange(Channel, MidRow),
 }
 
 impl Cea608 {
+    /// The channel for this parsed CEA-608 data
     pub fn channel(&self) -> Channel {
         match self {
             Self::Text(text) => text.channel,
@@ -114,6 +133,7 @@ pub struct Cea608State {
 }
 
 impl Cea608State {
+    /// Decode the provided bytes into an optional parsed [`Cea608`] command.
     pub fn decode(&mut self, data: [u8; 2]) -> Result<Option<Cea608>, ParserError> {
         trace!("decoding {data:x?}, last data {:x?}", self.last_data);
         let code = Code::from_data(data)?;
@@ -186,7 +206,8 @@ impl Cea608State {
         }
     }
 
-    pub fn clear(&mut self) {
+    /// Reset the state to that of an initially constructed object.
+    pub fn reset(&mut self) {
         *self = Self::default();
     }
 }

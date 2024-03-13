@@ -4,8 +4,9 @@
 // http://opensource.org/licenses/MIT>, at your option. This file may not be
 // copied, modified, or distributed except according to those terms.
 
-//! Module for the various [Code] tables available
+//! Module for the [Code] table
 
+/// Errors when parsing a [`Code`]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]
 pub enum CodeError {
     /// Invalid parity
@@ -21,27 +22,23 @@ pub enum CodeError {
     },
 }
 
+/// The channel the control code references
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Channel(pub(crate) bool);
 
 impl Channel {
+    /// Channel 1
     pub const ONE: Channel = Channel(true);
+    /// Channel 2
     pub const TWO: Channel = Channel(false);
 
+    /// The numerical identifier of this channel
     pub fn id(&self) -> u8 {
         if self.0 {
             1
         } else {
             2
         }
-    }
-
-    pub fn is_one(&self) -> bool {
-        self.0
-    }
-
-    pub fn is_two(&self) -> bool {
-        !self.is_one()
     }
 }
 
@@ -88,7 +85,7 @@ impl ControlCode {
                 }
             }
         }
-        if self.channel.is_two() {
+        if self.channel == Channel::TWO {
             data[0] |= 0x08;
         }
         for data in data.iter_mut() {
@@ -98,6 +95,7 @@ impl ControlCode {
     }
 }
 
+/// A mid-row change
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct MidRow {
     color: Color,
@@ -105,7 +103,7 @@ pub struct MidRow {
 }
 
 impl MidRow {
-    fn to_bytes(&self) -> [u8; 2] {
+    fn to_bytes(self) -> [u8; 2] {
         let underline = if self.underline { 0x01 } else { 0x0 };
         let color = match self.color {
             Color::White => 0x20,
@@ -121,6 +119,7 @@ impl MidRow {
     }
 }
 
+/// The color options available
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Color {
     White,
@@ -247,6 +246,7 @@ pub enum Control {
     Unknown([u8; 2]),
 }
 
+/// A preamble address code command contents
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct PreambleAddressCode {
     row: u8,
@@ -297,6 +297,7 @@ impl PreambleAddressCode {
     }
 }
 
+/// The type of the preamble
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum PreambleType {
     Color(Color),
@@ -310,7 +311,7 @@ pub enum PreambleType {
     Indent28,
 }
 
-/// Enum of all possible characters or commands available within [Service](super::Service) block
+/// Enum of all possible characters or commands available
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 // must be ordered the same as the byte values for binary search to be successful
 pub enum Code {
