@@ -310,7 +310,7 @@ impl PreambleAddressCode {
         }
     }
 
-    /// The row specified in this preamble
+    /// The row specified in this preamble (0-indexed)
     pub fn row(&self) -> u8 {
         self.row
     }
@@ -358,21 +358,21 @@ impl PreambleAddressCode {
     fn to_bytes(self) -> [u8; 2] {
         let underline = if self.underline { 0x1 } else { 0x0 };
         let (row0, row1) = match self.row {
-            1 => (0x11, 0x40),
-            2 => (0x11, 0x60),
-            3 => (0x12, 0x40),
-            4 => (0x12, 0x60),
-            5 => (0x15, 0x40),
-            6 => (0x15, 0x60),
-            7 => (0x16, 0x40),
-            8 => (0x16, 0x60),
-            9 => (0x17, 0x40),
-            10 => (0x17, 0x60),
-            11 => (0x10, 0x40),
-            12 => (0x13, 0x40),
-            13 => (0x13, 0x60),
-            14 => (0x14, 0x40),
-            15 => (0x14, 0x60),
+            0 => (0x11, 0x40),
+            1 => (0x11, 0x60),
+            2 => (0x12, 0x40),
+            3 => (0x12, 0x60),
+            4 => (0x15, 0x40),
+            5 => (0x15, 0x60),
+            6 => (0x16, 0x40),
+            7 => (0x16, 0x60),
+            8 => (0x17, 0x40),
+            9 => (0x17, 0x60),
+            10 => (0x10, 0x40),
+            11 => (0x13, 0x40),
+            12 => (0x13, 0x60),
+            13 => (0x14, 0x40),
+            14 => (0x14, 0x60),
             _ => unreachable!(),
         };
         let ty = match self.ty {
@@ -865,21 +865,21 @@ fn parse_control_code(data: [u8; 2]) -> ControlCode {
 fn parse_preamble(byte0: u8, byte1: u8) -> Option<PreambleAddressCode> {
     let underline = byte1 & 0x1 != 0;
     let row = match (byte0, byte1) {
-        (0x11, 0x40..=0x5f) => 1,
-        (0x11, 0x60..=0x7f) => 2,
-        (0x12, 0x40..=0x5f) => 3,
-        (0x12, 0x60..=0x7f) => 4,
-        (0x15, 0x40..=0x5f) => 5,
-        (0x15, 0x60..=0x7f) => 6,
-        (0x16, 0x40..=0x5f) => 7,
-        (0x16, 0x60..=0x7f) => 8,
-        (0x17, 0x40..=0x5f) => 9,
-        (0x17, 0x60..=0x7f) => 10,
-        (0x10, 0x40..=0x5f) => 11,
-        (0x13, 0x40..=0x5f) => 12,
-        (0x13, 0x60..=0x7f) => 13,
-        (0x14, 0x40..=0x5f) => 14,
-        (0x14, 0x60..=0x7f) => 15,
+        (0x11, 0x40..=0x5f) => 0,
+        (0x11, 0x60..=0x7f) => 1,
+        (0x12, 0x40..=0x5f) => 2,
+        (0x12, 0x60..=0x7f) => 3,
+        (0x15, 0x40..=0x5f) => 4,
+        (0x15, 0x60..=0x7f) => 5,
+        (0x16, 0x40..=0x5f) => 6,
+        (0x16, 0x60..=0x7f) => 7,
+        (0x17, 0x40..=0x5f) => 8,
+        (0x17, 0x60..=0x7f) => 9,
+        (0x10, 0x40..=0x5f) => 10,
+        (0x13, 0x40..=0x5f) => 11,
+        (0x13, 0x60..=0x7f) => 12,
+        (0x14, 0x40..=0x5f) => 13,
+        (0x14, 0x60..=0x7f) => 14,
         _ => return None,
     };
     let ty = match byte1 & 0x1e {
@@ -1216,7 +1216,7 @@ mod test {
             PreambleType::Indent24,
             PreambleType::Indent28,
         ];
-        for row in 1..=15 {
+        for row in 0..=14 {
             for underline in [true, false] {
                 for ty in tys {
                     for channel in [Channel::ONE, Channel::TWO] {
