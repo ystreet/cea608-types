@@ -10,6 +10,8 @@
 //!
 //! The reference for this implementation is the [ANSI/CTA-608-E S-2019](https://shop.cta.tech/products/line-21-data-services) specification.
 
+use std::collections::VecDeque;
+
 use tables::{Channel, Code, MidRow, PreambleAddressCode};
 
 #[macro_use]
@@ -216,6 +218,78 @@ impl Cea608State {
     }
 }
 
+/// A writer that handles combining single byte [`Code`]s and double byte [`Code`]s.
+#[derive(Debug, Default)]
+pub struct Cea608Writer {
+    pending: VecDeque<Code>,
+    pending_code: Option<Code>,
+}
+
+impl Cea608Writer {
+    /// Push a [`Code`] into this writer
+    pub fn push(&mut self, code: Code) {
+        self.pending.push_front(code)
+    }
+
+    /// Pop a [`Code`] from this writer
+    pub fn pop(&mut self) -> [u8; 2] {
+        let mut ret = [0x80; 2];
+        let mut prev = None::<Code>;
+
+        if let Some(code) = self.pending_code.take() {
+            code.write_into(&mut ret);
+            return ret;
+        }
+
+        while let Some(code) = self.pending.pop_back() {
+            if let Some(prev) = prev {
+                if code.byte_len() == 1 {
+                    let mut data = [0; 2];
+                    prev.write_into(&mut ret);
+                    code.write_into(&mut data);
+                    ret[1] = data[0];
+                    return ret;
+                } else if code.needs_backspace() {
+                    self.pending_code = Some(code);
+                    let mut data = [0; 2];
+                    prev.write_into(&mut ret);
+                    Code::Space.write_into(&mut data);
+                    ret[1] = data[0];
+                    return ret;
+                } else {
+                    self.pending_code = Some(code);
+                    prev.write_into(&mut ret);
+                    return ret;
+                }
+            } else if code.needs_backspace() {
+                // all back space needing codes are 2 byte commands
+                self.pending_code = Some(code);
+                Code::Space.write_into(&mut ret);
+                return ret;
+            } else if code.byte_len() == 1 {
+                prev = Some(code);
+            } else {
+                code.write_into(&mut ret);
+                return ret;
+            }
+        }
+        if let Some(prev) = prev {
+            prev.write_into(&mut ret);
+        }
+        ret
+    }
+
+    /// The number of codes currently stored
+    pub fn n_codes(&self) -> usize {
+        self.pending.len() + if self.pending_code.is_some() { 1 } else { 0 }
+    }
+
+    /// Reset as if it was a newly created instance
+    pub fn reset(&mut self) {
+        *self = Self::default();
+    }
+}
+
 #[cfg(test)]
 mod test {
     use self::tables::ControlCode;
@@ -287,6 +361,85 @@ mod test {
             }))),
             state.decode([data[0], 0x80])
         );
+    }
+
+    #[test]
+    fn writer_padding() {
+        test_init_log();
+        let mut writer = Cea608Writer::default();
+        assert_eq!(writer.pop(), [0x80, 0x80]);
+    }
+
+    #[test]
+    fn writer_single_byte_code() {
+        test_init_log();
+        let mut writer = Cea608Writer::default();
+        writer.push(Code::LatinLowerA);
+        assert_eq!(writer.pop(), [0x61, 0x80]);
+        assert_eq!(writer.pop(), [0x80, 0x80]);
+    }
+
+    #[test]
+    fn writer_two_single_byte_codes() {
+        test_init_log();
+        let mut writer = Cea608Writer::default();
+        writer.push(Code::LatinLowerA);
+        writer.push(Code::LatinLowerB);
+        assert_eq!(writer.pop(), [0x61, 0x62]);
+        assert_eq!(writer.pop(), [0x80, 0x80]);
+    }
+
+    #[test]
+    fn writer_single_byte_and_control() {
+        test_init_log();
+        let mut writer = Cea608Writer::default();
+        writer.push(Code::LatinLowerA);
+        writer.push(Code::Control(ControlCode::new(
+            Channel::ONE,
+            tables::Control::DegreeSign,
+        )));
+        assert_eq!(writer.pop(), [0x61, 0x80]);
+        assert_eq!(writer.pop(), [0x91, 0x31]);
+        assert_eq!(writer.pop(), [0x80, 0x80]);
+    }
+
+    #[test]
+    fn writer_single_byte_and_control_needing_backspace() {
+        test_init_log();
+        let mut writer = Cea608Writer::default();
+        writer.push(Code::LatinLowerA);
+        writer.push(Code::Control(ControlCode::new(
+            Channel::ONE,
+            tables::Control::Tilde,
+        )));
+        assert_eq!(writer.pop(), [0x61, 0x20]);
+        assert_eq!(writer.pop(), [0x13, 0x2f]);
+        assert_eq!(writer.pop(), [0x80, 0x80]);
+    }
+
+    #[test]
+    fn writer_control_needing_backspace() {
+        test_init_log();
+        let mut writer = Cea608Writer::default();
+        writer.push(Code::Control(ControlCode::new(
+            Channel::ONE,
+            tables::Control::Tilde,
+        )));
+        assert_eq!(writer.pop(), [0x20, 0x80]);
+        assert_eq!(writer.pop(), [0x13, 0x2f]);
+        assert_eq!(writer.pop(), [0x80, 0x80]);
+    }
+
+    #[test]
+    fn writer_control() {
+        test_init_log();
+        let mut writer = Cea608Writer::default();
+        writer.push(Code::Control(ControlCode::new(
+            Channel::ONE,
+            tables::Control::DegreeSign,
+        )));
+        assert_eq!(writer.pop(), [0x91, 0x31]);
+        assert_eq!(writer.pop(), [0x80, 0x80]);
     }
 }
 

@@ -984,6 +984,48 @@ impl Code {
         unreachable!()
     }
 
+    /// Write a [Code] to a pair of bytes
+    ///
+    /// # Examples
+    /// ```
+    /// # use cea608_types::tables::Code;
+    /// let mut written = [0; 2];
+    /// assert_eq!(1, Code::LatinCapitalC.write_into(&mut written));
+    /// assert_eq!(written, [0x43, 0x80]);
+    /// ```
+    pub fn write_into(&self, bytes: &mut [u8; 2]) -> usize {
+        match self {
+            Code::Unknown(data) => {
+                bytes[0] = add_parity(*data);
+                bytes[1] = 0x80;
+                return 1;
+            }
+            Code::Control(control) => {
+                bytes.copy_from_slice(&control.write());
+                return 2;
+            }
+            _ => {
+                if let Ok(idx) =
+                    CODE_MAP_TABLE.binary_search_by_key(&self, |code_map| &code_map.code)
+                {
+                    let len = CODE_MAP_TABLE[idx].cea608_bytes.len();
+                    for (i, b) in CODE_MAP_TABLE[idx]
+                        .cea608_bytes
+                        .into_iter()
+                        .map(|b| add_parity(*b))
+                        .chain([0x80, 0x80].into_iter())
+                        .enumerate()
+                        .take(2)
+                    {
+                        bytes[i] = b;
+                    }
+                    return len;
+                }
+            }
+        }
+        unreachable!()
+    }
+
     /// The utf8 char for this [Code]
     ///
     /// [Code]s that represent a command will return None.
