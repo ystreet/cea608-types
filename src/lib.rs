@@ -67,6 +67,13 @@ pub enum Mode {
     RollUp4,
 }
 
+impl Mode {
+    /// Whether this mode is a roll-up mode
+    pub fn is_rollup(&self) -> bool {
+        matches!(self, Self::RollUp2 | Self::RollUp3 | Self::RollUp4)
+    }
+}
+
 /// Text information
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct Text {
