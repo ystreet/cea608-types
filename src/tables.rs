@@ -347,12 +347,7 @@ impl PreambleAddressCode {
 
     /// The color of this preamble
     pub fn color(&self) -> Color {
-        if let PreambleType::Color(color) = self.ty {
-            color
-        } else {
-            // all indents assign white as the color
-            Color::White
-        }
+        self.ty.color()
     }
 
     fn to_bytes(self) -> [u8; 2] {
@@ -410,6 +405,18 @@ pub enum PreambleType {
     Indent20,
     Indent24,
     Indent28,
+}
+
+impl PreambleType {
+    /// The color of this preamble
+    pub fn color(&self) -> Color {
+        if let PreambleType::Color(color) = self {
+            *color
+        } else {
+            // all indents assign white as the color
+            Color::White
+        }
+    }
 }
 
 /// Enum of all possible characters or commands available
