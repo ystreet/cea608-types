@@ -72,6 +72,16 @@ impl Mode {
     pub fn is_rollup(&self) -> bool {
         matches!(self, Self::RollUp2 | Self::RollUp3 | Self::RollUp4)
     }
+
+    /// How many rows of roll up captions this mode supports.  Other modes will return [`None`].
+    pub fn rollup_rows(&self) -> Option<u8> {
+        match self {
+            Self::RollUp2 => Some(2),
+            Self::RollUp3 => Some(3),
+            Self::RollUp4 => Some(4),
+            _ => None,
+        }
+    }
 }
 
 /// Text information
