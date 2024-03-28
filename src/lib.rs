@@ -12,7 +12,7 @@
 
 use std::collections::VecDeque;
 
-use tables::{Channel, Code, MidRow, PreambleAddressCode};
+use tables::{Channel, Code, Field, MidRow, PreambleAddressCode};
 
 #[macro_use]
 extern crate log;
@@ -147,10 +147,13 @@ impl Cea608 {
 /// Helper struct that has two purposes:
 /// 1. Tracks the previous data for control code de-duplication
 /// 2. Adds the last received channel to non control codes.
+///
+/// This object only keeps data for a single [`Field`]
 #[derive(Debug, Default)]
 pub struct Cea608State {
     last_data: Option<[u8; 2]>,
     last_channel: Option<Channel>,
+    last_received_field: Option<Field>,
 }
 
 impl Cea608State {
@@ -173,6 +176,9 @@ impl Cea608State {
             [Code::Control(control_code), _] => {
                 let channel = control_code.channel();
                 self.last_channel = Some(channel);
+                if let Some(field) = control_code.field() {
+                    self.last_received_field = Some(field);
+                }
                 Ok(Some(match control_code.code() {
                     tables::Control::MidRow(midrow) => Cea608::MidRowChange(channel, midrow),
                     tables::Control::PreambleAddress(preamble) => {
@@ -227,6 +233,12 @@ impl Cea608State {
                 }
             }
         }
+    }
+
+    /// The [`Field`] that some specific [`tables::Control`] codes referenced.  Can be used to detect field
+    /// reversal of the incoming data.
+    pub fn last_received_field(&self) -> Option<Field> {
+        self.last_received_field
     }
 
     /// Reset the state to that of an initially constructed object.
@@ -307,6 +319,55 @@ impl Cea608Writer {
     }
 }
 
+/// A CEA-608 caption identifier unique within a CEA-608 stream
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum Id {
+    CC1,
+    CC2,
+    CC3,
+    CC4,
+    // TODO: add Text1/2
+}
+
+impl Id {
+    /// The [`Field`] that this [`Id`] is contained within
+    pub fn field(&self) -> Field {
+        match self {
+            Self::CC1 | Self::CC2 => Field::ONE,
+            Self::CC3 | Self::CC4 => Field::TWO,
+        }
+    }
+
+    /// The caption [`Channel`] that this [`Id`] references
+    pub fn channel(&self) -> Channel {
+        match self {
+            Self::CC1 | Self::CC3 => Channel::ONE,
+            Self::CC2 | Self::CC4 => Channel::TWO,
+        }
+    }
+
+    /// Construct an [`Id`] from a [`Field`] and [`Channel`]
+    pub fn from_caption_field_channel(field: Field, channel: Channel) -> Self {
+        match (field, channel) {
+            (Field::ONE, Channel::ONE) => Self::CC1,
+            (Field::ONE, Channel::TWO) => Self::CC2,
+            (Field::TWO, Channel::ONE) => Self::CC3,
+            (Field::TWO, Channel::TWO) => Self::CC4,
+        }
+    }
+
+    /// Construct an [`Id`] from its integer value in the range [1, 4]
+    pub fn from_value(value: i8) -> Self {
+        match value {
+            1 => Self::CC1,
+            2 => Self::CC2,
+            3 => Self::CC3,
+            4 => Self::CC4,
+            _ => unreachable!(),
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use self::tables::ControlCode;
@@ -319,17 +380,20 @@ mod test {
         test_init_log();
         let mut data = vec![];
         Code::Control(ControlCode::new(
-            Channel(true),
+            Field::ONE,
+            Channel::ONE,
             tables::Control::EraseDisplayedMemory,
         ))
         .write(&mut data)
         .unwrap();
         let mut state = Cea608State::default();
         assert_eq!(
-            Ok(Some(Cea608::EraseDisplay(Channel(true)))),
+            Ok(Some(Cea608::EraseDisplay(Channel::ONE))),
             state.decode([data[0], data[1]])
         );
+        assert_eq!(state.last_received_field(), Some(Field::ONE));
         assert_eq!(Ok(None), state.decode([data[0], data[1]]));
+        assert_eq!(state.last_received_field(), Some(Field::ONE));
     }
 
     #[test]
@@ -338,13 +402,18 @@ mod test {
         let mut state = Cea608State::default();
 
         let mut data = vec![];
-        Code::Control(ControlCode::new(Channel::ONE, tables::Control::RollUp2))
-            .write(&mut data)
-            .unwrap();
+        Code::Control(ControlCode::new(
+            Field::ONE,
+            Channel::ONE,
+            tables::Control::RollUp2,
+        ))
+        .write(&mut data)
+        .unwrap();
         assert_eq!(
             Ok(Some(Cea608::NewMode(Channel::ONE, Mode::RollUp2))),
             state.decode([data[0], data[1]])
         );
+        assert_eq!(state.last_received_field(), Some(Field::ONE));
 
         let mut data = vec![];
         Code::LatinCapitalA.write(&mut data).unwrap();
@@ -357,15 +426,21 @@ mod test {
             }))),
             state.decode([data[0], 0x80])
         );
+        assert_eq!(state.last_received_field(), Some(Field::ONE));
 
         let mut data = vec![];
-        Code::Control(ControlCode::new(Channel::TWO, tables::Control::RollUp2))
-            .write(&mut data)
-            .unwrap();
+        Code::Control(ControlCode::new(
+            Field::TWO,
+            Channel::TWO,
+            tables::Control::RollUp2,
+        ))
+        .write(&mut data)
+        .unwrap();
         assert_eq!(
             Ok(Some(Cea608::NewMode(Channel::TWO, Mode::RollUp2))),
             state.decode([data[0], data[1]])
         );
+        assert_eq!(state.last_received_field(), Some(Field::TWO));
 
         let mut data = vec![];
         Code::LatinCapitalA.write(&mut data).unwrap();
@@ -412,6 +487,7 @@ mod test {
         let mut writer = Cea608Writer::default();
         writer.push(Code::LatinLowerA);
         writer.push(Code::Control(ControlCode::new(
+            Field::ONE,
             Channel::ONE,
             tables::Control::DegreeSign,
         )));
@@ -426,6 +502,7 @@ mod test {
         let mut writer = Cea608Writer::default();
         writer.push(Code::LatinLowerA);
         writer.push(Code::Control(ControlCode::new(
+            Field::ONE,
             Channel::ONE,
             tables::Control::Tilde,
         )));
@@ -439,6 +516,7 @@ mod test {
         test_init_log();
         let mut writer = Cea608Writer::default();
         writer.push(Code::Control(ControlCode::new(
+            Field::ONE,
             Channel::ONE,
             tables::Control::Tilde,
         )));
@@ -452,6 +530,7 @@ mod test {
         test_init_log();
         let mut writer = Cea608Writer::default();
         writer.push(Code::Control(ControlCode::new(
+            Field::ONE,
             Channel::ONE,
             tables::Control::DegreeSign,
         )));
