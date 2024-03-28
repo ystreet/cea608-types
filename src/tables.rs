@@ -292,6 +292,18 @@ pub enum Control {
     Unknown([u8; 2]),
 }
 
+impl Control {
+    /// Construct a new tab offset control code.
+    pub fn tab_offset(offset: u8) -> Option<Control> {
+        match offset {
+            1 => Some(Control::TabOffset1),
+            2 => Some(Control::TabOffset1),
+            3 => Some(Control::TabOffset1),
+            _ => None,
+        }
+    }
+}
+
 /// A preamble address code command contents
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct PreambleAddressCode {
@@ -408,6 +420,26 @@ pub enum PreambleType {
 }
 
 impl PreambleType {
+    /// Create a new [`PreambleType`] from an indent value
+    pub fn from_indent(indent: u8) -> Option<Self> {
+        match indent {
+            0 => Some(Self::Indent0),
+            4 => Some(Self::Indent4),
+            8 => Some(Self::Indent8),
+            12 => Some(Self::Indent12),
+            16 => Some(Self::Indent16),
+            20 => Some(Self::Indent20),
+            24 => Some(Self::Indent24),
+            28 => Some(Self::Indent28),
+            _ => None,
+        }
+    }
+
+    /// Create a new [`PreambleType`] from a [`Color`]
+    pub fn from_color(color: Color) -> Self {
+        Self::Color(color)
+    }
+
     /// The color of this preamble
     pub fn color(&self) -> Color {
         if let PreambleType::Color(color) = self {
@@ -415,6 +447,21 @@ impl PreambleType {
         } else {
             // all indents assign white as the color
             Color::White
+        }
+    }
+
+    /// The indent value of this [`PreambleType`]
+    pub fn indent(&self) -> Option<u8> {
+        match self {
+            Self::Indent0 => Some(0),
+            Self::Indent4 => Some(4),
+            Self::Indent8 => Some(8),
+            Self::Indent12 => Some(12),
+            Self::Indent16 => Some(16),
+            Self::Indent20 => Some(20),
+            Self::Indent24 => Some(24),
+            Self::Indent28 => Some(28),
+            _ => None,
         }
     }
 }
