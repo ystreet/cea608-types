@@ -1065,7 +1065,7 @@ impl Code {
                     let len = CODE_MAP_TABLE[idx].cea608_bytes.len();
                     for (i, b) in CODE_MAP_TABLE[idx]
                         .cea608_bytes
-                        .into_iter()
+                        .iter()
                         .map(|b| add_parity(*b))
                         .chain([0x80, 0x80].into_iter())
                         .enumerate()
