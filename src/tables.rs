@@ -42,11 +42,33 @@ impl Channel {
     }
 }
 
+/// The field that the control code references
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Field(pub(crate) bool);
+
+impl Field {
+    /// Field 1
+    pub const ONE: Field = Field(true);
+    /// Field 2
+    pub const TWO: Field = Field(false);
+
+    /// The numerical identifier of this field
+    pub fn id(&self) -> u8 {
+        if self.0 {
+            1
+        } else {
+            2
+        }
+    }
+}
+
 /// A control code
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 // must be ordered the same as the byte values
 // These codes start with 0x11 (channel 1, odd-parity: 0x91) or 0x19 (channel 2, odd-parity: 0x19)
 pub struct ControlCode {
+    /// The field
+    pub field: Option<Field>,
     /// The channel
     pub channel: Channel,
     /// The control code
@@ -55,13 +77,22 @@ pub struct ControlCode {
 
 impl ControlCode {
     /// Construct a new [`ControlCode`]
-    pub fn new(channel: Channel, control: Control) -> Self {
-        Self { channel, control }
+    pub fn new(field: Field, channel: Channel, control: Control) -> Self {
+        Self {
+            field: Some(field),
+            channel,
+            control,
+        }
     }
 
     /// The [`Channel`] for this [`ControlCode`]
     pub fn channel(&self) -> Channel {
         self.channel
+    }
+
+    /// The [`Field`] for this [`ControlCode`]
+    pub fn field(&self) -> Option<Field> {
+        self.field
     }
 
     /// The [`Control`] code for this [`ControlCode`]
@@ -90,6 +121,9 @@ impl ControlCode {
                     unreachable!();
                 }
             }
+        }
+        if (0x20..=0x2f).contains(&data[1]) && data[0] == 0x14 && self.field == Some(Field::TWO) {
+            data[0] |= 0x01;
         }
         if self.channel == Channel::TWO {
             data[0] |= 0x08;
@@ -860,10 +894,24 @@ fn check_odd_parity(byte: u8) -> bool {
 fn parse_control_code(data: [u8; 2]) -> ControlCode {
     let channel = data[0] & 0x08;
     let underline = data[1] & 0x1 != 0;
+    let mut byte0 = data[0] & !0x08;
+    let field = if (0x20..=0x2f).contains(&data[1]) {
+        match data[0] & !0x08 {
+            0x14 => Some(Field::ONE),
+            0x15 => {
+                byte0 &= !0x01;
+                Some(Field::TWO)
+            }
+            _ => None,
+        }
+    } else {
+        None
+    };
 
     ControlCode {
+        field,
         channel: Channel(channel == 0),
-        control: match (data[0] & !0x08, data[1]) {
+        control: match (byte0, data[1]) {
             (0x11, 0x20 | 0x21) => Control::MidRow(MidRow {
                 color: MidRowColor::Color(Color::White),
                 underline,
@@ -898,7 +946,7 @@ fn parse_control_code(data: [u8; 2]) -> ControlCode {
             }),
             (0x10..=0x19, 0x20..=0x3f) => {
                 let idx = CONTROL_MAP_TABLE
-                    .binary_search_by_key(&[data[0] & !0x08, data[1]], |control_map| {
+                    .binary_search_by_key(&[byte0, data[1]], |control_map| {
                         control_map.cea608_bytes
                     });
                 idx.map(|idx| CONTROL_MAP_TABLE[idx].control)
@@ -1130,6 +1178,7 @@ impl Code {
                 CONTROL_MAP_TABLE.iter().find_map(|control_map| {
                     if code_map.utf8 == Some(c) {
                         Some(Code::Control(ControlCode {
+                            field: None,
                             channel,
                             control: control_map.control,
                         }))
@@ -1144,6 +1193,7 @@ impl Code {
     /// Whether or not this code requires there to have a backspace prepended for correct display
     pub fn needs_backspace(&self) -> bool {
         let Code::Control(ControlCode {
+            field: _,
             channel: _,
             control,
         }) = self
@@ -1317,6 +1367,7 @@ mod test {
                 for ty in tys {
                     for channel in [Channel::ONE, Channel::TWO] {
                         let preamble = Code::Control(ControlCode {
+                            field: None,
                             channel,
                             control: Control::PreambleAddress(PreambleAddressCode {
                                 row,
@@ -1353,6 +1404,7 @@ mod test {
             for color in colors {
                 for channel in [Channel::ONE, Channel::TWO] {
                     let midrow = Code::Control(ControlCode {
+                        field: None,
                         channel,
                         control: Control::MidRow(MidRow { underline, color }),
                     });
@@ -1362,6 +1414,45 @@ mod test {
                     debug!("{data:x?}");
                     let parsed = Code::from_data([data[0], data[1]]).unwrap();
                     assert_eq!(midrow, parsed[0]);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn field2_control_to_from_bytes() {
+        let codes = [
+            Control::ResumeCaptionLoading,
+            Control::Backspace,
+            Control::AlarmOff,
+            Control::AlarmOn,
+            Control::DeleteToEndOfRow,
+            Control::RollUp2,
+            Control::RollUp3,
+            Control::RollUp4,
+            Control::FlashOn,
+            Control::ResumeDirectionCaptioning,
+            Control::TextRestart,
+            Control::ResumeTextDisplay,
+            Control::EraseDisplayedMemory,
+            Control::CarriageReturn,
+            Control::EraseNonDisplayedMemory,
+            Control::EndOfCaption,
+        ];
+        for control in codes {
+            for field in [Field::ONE, Field::TWO] {
+                for channel in [Channel::ONE, Channel::TWO] {
+                    let control = Code::Control(ControlCode {
+                        field: Some(field),
+                        channel,
+                        control,
+                    });
+                    debug!("{control:?}");
+                    let mut data = vec![];
+                    control.write(&mut data).unwrap();
+                    debug!("{data:x?}");
+                    let parsed = Code::from_data([data[0], data[1]]).unwrap();
+                    assert_eq!(control, parsed[0]);
                 }
             }
         }
