@@ -9,7 +9,7 @@ keywords = ["multimedia", "captions"]
 categories = ["multimedia::encoding"]
 documentation = "https://docs.rs/cea608-types"
 repository = "https://github.com/ystreet/cea608-types"
-rust-version = "1.65.0"
+rust-version = "1.71.1"
 
 [dependencies]
 log = "0.4"
@@ -17,4 +17,4 @@ thiserror = "1"
 once_cell = "1"
 
 [dev-dependencies]
-env_logger = "0.10"
+env_logger = "0.11"
