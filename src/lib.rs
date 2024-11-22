@@ -4,6 +4,8 @@
 // http://opensource.org/licenses/MIT>, at your option. This file may not be
 // copied, modified, or distributed except according to those terms.
 
+#![deny(missing_debug_implementations)]
+
 //! # cea608-types
 //!
 //! Provides the necessary infrastructure to read and write CEA-608 byte pairs
