@@ -5,6 +5,7 @@
 // copied, modified, or distributed except according to those terms.
 
 #![deny(missing_debug_implementations)]
+#![deny(missing_docs)]
 
 //! # cea608-types
 //!
@@ -62,10 +63,19 @@ impl From<tables::CodeError> for ParserError {
 /// A CEA-08 presentation mode
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Mode {
+    /// The Pop-On CEA-608 mode.  Text is stored in a hidden buffer that is swapped with the
+    /// displayed text.
     PopOn,
+    /// The Paint-On CEA-608 mode.  Text is written directly to the display as it arrives.
     PaintOn,
+    /// The Roll-Up 2 CEA-608 mode.  Text is appended to rows and on a CR command, all of the rows
+    /// move up one row.  This variant contains 2 rows of display.
     RollUp2,
+    /// The Roll-Up 2 CEA-608 mode.  Text is appended to rows and on a CR command, all of the rows
+    /// move up one row.  This variant contains 3 rows of display.
     RollUp3,
+    /// The Roll-Up 2 CEA-608 mode.  Text is appended to rows and on a CR command, all of the rows
+    /// move up one row.  This variant contains 4 rows of display.
     RollUp4,
 }
 
@@ -324,9 +334,13 @@ impl Cea608Writer {
 /// A CEA-608 caption identifier unique within a CEA-608 stream
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Id {
+    /// The CC1 caption stream placed in field 1 with caption channel 1.
     CC1,
+    /// The CC2 caption stream placed in field 1 with caption channel 2.
     CC2,
+    /// The CC1 caption stream placed in field 2 with caption channel 1.
     CC3,
+    /// The CC4 caption stream placed in field 2 with caption channel 2.
     CC4,
     // TODO: add Text1/2
 }
