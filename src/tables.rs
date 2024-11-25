@@ -1391,12 +1391,18 @@ impl Code {
     pub fn from_char(c: char, channel: Channel) -> Option<Code> {
         // table is not currently sorted by utf8 value so cannot binary search through it.  May
         // need another lookup table if this is a performance concern
-        CODE_MAP_TABLE.iter().find_map(|code_map| {
-            if code_map.utf8 == Some(c) {
-                Some(code_map.code)
-            } else {
+        CODE_MAP_TABLE
+            .iter()
+            .find_map(|code_map| {
+                if code_map.utf8 == Some(c) {
+                    Some(code_map.code)
+                } else {
+                    None
+                }
+            })
+            .or_else(|| {
                 CONTROL_MAP_TABLE.iter().find_map(|control_map| {
-                    if code_map.utf8 == Some(c) {
+                    if control_map.utf8 == Some(c) {
                         Some(Code::Control(ControlCode {
                             field: None,
                             channel,
@@ -1406,8 +1412,7 @@ impl Code {
                         None
                     }
                 })
-            }
-        })
+            })
     }
 
     /// Whether or not this code requires there to have a backspace prepended for correct display
@@ -1676,5 +1681,17 @@ mod test {
                 }
             }
         }
+    }
+
+    #[test]
+    fn test_control_code_from_char() {
+        assert_eq!(
+            Code::from_char('à', Channel::ONE),
+            Some(Code::Control(ControlCode {
+                field: None,
+                channel: Channel::ONE,
+                control: Control::LatinLowerAWithGrave
+            }))
+        );
     }
 }
