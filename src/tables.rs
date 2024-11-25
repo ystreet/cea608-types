@@ -642,7 +642,7 @@ static CODE_MAP_TABLE: [CodeMap; 97] = [
     code_map_single_byte!(0x27, Code::Apostrophe, Some('\'')),
     code_map_single_byte!(0x28, Code::LeftParenthesis, Some('(')),
     code_map_single_byte!(0x29, Code::RightParenthesis, Some(')')),
-    code_map_single_byte!(0x2A, Code::LatinLowerAWithAcute, Some('Á')),
+    code_map_single_byte!(0x2A, Code::LatinLowerAWithAcute, Some('á')),
     //code_map_single_byte!(0x2A, Code::Asterisk, Some('*')),
     code_map_single_byte!(0x2B, Code::PlusSign, Some('+')),
     code_map_single_byte!(0x2C, Code::Comma, Some(',')),
