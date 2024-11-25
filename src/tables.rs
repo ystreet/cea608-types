@@ -203,12 +203,19 @@ impl MidRow {
 /// The color options available
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Color {
+    /// White. RGB value 1.0, 1.0, 1.0.
     White,
+    /// Green. RGB value 0.0, 1.0, 0.0.
     Green,
+    /// Blue. RGB value 0.0, 0.0, 1.0.
     Blue,
+    /// Cyan. RGB value 0.0, 1.0, 1.0.
     Cyan,
+    /// Red. RGB value 1.0, 0.0, 0.0.
     Red,
+    /// Yellow. RGB value 1.0, 1.0, 0.0.
     Yellow,
+    /// Magenta. RGB value 1.0, 0.0, 1.0.
     Magenta,
 }
 
@@ -217,112 +224,216 @@ pub enum Color {
 // must be ordered the same as the byte values
 // These codes start with 0x11 (channel 1, odd-parity: 0x91) or 0x19 (channel 2, odd-parity: 0x19)
 pub enum Control {
+    /// A midrow control code.
     MidRow(MidRow),
+    /// Ⓡ
     RegisteredTrademarkSign,
+    /// °
     DegreeSign,
+    /// ½
     Fraction12,
+    /// ¿
     InvertedQuestionMark,
+    /// ™
     TradeMarkSign,
+    /// ¢
     CentSign,
+    /// £
     PoundSign,
+    /// ♪
     MusicalNote,
+    /// à
     LatinLowerAWithGrave,
+    /// (Transparent)
     TransparentSpace,
+    /// è
     LatinLowerEWithGrave,
+    /// â
     LatinLowerAWithCircumflex,
+    /// ê
     LatinLowerEWithCircumflex,
+    /// î
     LatinLowerIWithCircumflex,
+    /// ô
     LatinLowerOWithCircumflex,
+    /// û
     LatinLowerUWithCircumflex,
 
+    /// Á
     LatinCapitalAWithAcute,
+    /// É
     LatinCapitalEWithAcute,
+    /// Ó
     LatinCapitalOWithAcute,
+    /// Ú
     LatinCapitalUWithAcute,
+    /// Ü
     LatinCapitalUWithDiaeseresis,
+    /// ü
     LatinLowerUWithDiaeseresis,
+    /// ´
     OpeningSingleQuote,
+    /// ¡
     InvertedExclamationMark,
+    /// *
     Asterisk,
+    /// '
     SingleOpenQuote,
+    /// _
     EmDash,
+    /// Ⓒ
     CopyrightSign,
+    /// ℠
     ServiceMarkSign,
+    /// •
     RoundBullet,
+    /// “
     DoubleOpenQuote,
+    /// ”
     DoubleCloseQuote,
+    /// À
     LatinCapitalAWithGrave,
+    /// Â
     LatinCapitalAWithCircumflex,
+    /// Ç
     LatinCapitalCWithCedilla,
+    /// È
     LatinCapitalEWithGrave,
+    /// Ê
     LatinCapitalEWithCircumflex,
+    /// Ë
     LatinCapitalEWithDiaeresis,
+    /// ë
     LatinLowerEWithDiaeresis,
+    /// Î
     LatinCapitalIWithCircumflex,
+    /// Ï
     LatinCapitalIWithDiaeresis,
+    /// ï
     LatinLowerIWithDiaeresis,
+    /// Ô
     LatinCapitalOWithCircumflex,
+    /// Ù
     LatinCapitalUWithGrave,
+    /// ù
     LatinLowerUWithGrave,
+    /// Û
     LatinCapitalUWithCircumflex,
+    /// «
     OpeningGuillemets,
+    /// »
     ClosingGuillemets,
 
+    /// Ã
     LatinCapitalAWithTilde,
+    /// ã
     LatinLowerAWithTilde,
+    /// Í
     LatinCapitalIWithAcute,
+    /// Ì
     LatinCapitalIWithGrave,
+    /// ì
     LatinLowerIWithGrave,
+    /// Ò
     LatinCapitalOWithGrave,
+    /// ò
     LatinLowerOWithGrave,
+    /// Õ
     LatinCapitalOWithTilde,
+    /// õ
     LatinLowerOWithTilde,
+    /// {
     OpeningBrace,
+    /// }
     ClosingBrace,
+    /// \
     ReverseSolidus,
+    /// ^
     Caret,
+    /// _
     Underbar,
+    /// |
     Pipe,
+    /// ~
     Tilde,
+    /// Ä
     LatinCapitalAWithDiaeresis,
+    /// ä
     LatinLowerAWithDiaeresis,
+    /// Ö
     LatinCapitalOWithDiaeresis,
+    /// ö
     LatinLowerOWithDiaeresis,
+    /// ß
     LatinLowerSharpS,
+    /// ¥
     YenSign,
+    /// ¤
     GeneralCurrencySign,
+    /// ¦
     VerticalBar,
+    /// Å
     LatinCapitalAWithRingAbove,
+    /// å
     LatinLowerAWithRingAbove,
+    /// Ø
     LatinCapitalOWithStroke,
+    /// ø
     LatinLowerOWithStroke,
+    /// ⌜
     UpperLeftBorder,
+    /// ⌝
     UpperRightBorder,
+    /// ⌞
     LowerLeftBorder,
+    /// ⌟
     LowerRightBorder,
 
+    /// Changes the mode of captioning to Pop-on.  Existing displayed captions are not affected.
     ResumeCaptionLoading,
+    /// Remove the character at the previous location and move the cursor one character backwards.
     Backspace,
+    /// Reserved (was Alarm Off).
     AlarmOff,
+    /// Reserved (was Alarm On).
     AlarmOn,
+    /// Delete all characters from the current cursor position to the end of the row.
     DeleteToEndOfRow,
+    /// Change the mode of captioning to Roll-Up with 2 rows.
     RollUp2,
+    /// Change the mode of captioning to Roll-Up with 3 rows.
     RollUp3,
+    /// Change the mode of captioning to Roll-Up with 4 rows.
     RollUp4,
+    /// Indicate that the character flash on and off.
     FlashOn,
+    /// Changes the mode of captioning to Paint-on.  Existing displayed captions are not affected.
     ResumeDirectionCaptioning,
+    /// Enter Text mode, clearing the Text screen buffer of any contents.
     TextRestart,
+    /// Enter Text mode, keeping the Text screen buffer intact.
     ResumeTextDisplay,
+    /// Remove all contents from the displayed screen buffer.
     EraseDisplayedMemory,
+    /// Move the cursor to the next row and column 0.  Depending on the current mode, this will
+    /// result in different visual output.  See the CEA-608 specification for details.
     CarriageReturn,
+    /// Remove all contents from the no displayed screen buffer.
     EraseNonDisplayedMemory,
+    /// Flip the non displayed and displayed screen buffer.
     EndOfCaption,
 
+    /// Move the cursor one character to the right.
     TabOffset1,
+    /// Move the cursor two characters to the right.
     TabOffset2,
+    /// Move the cursor three characters to the right.
     TabOffset3,
 
+    /// A preamble address code signalling row and column position as well as some text formatting
+    /// information.
     PreambleAddress(PreambleAddressCode),
+    /// An unknown command.
     Unknown([u8; 2]),
 }
 
@@ -441,15 +552,25 @@ impl PreambleAddressCode {
 /// The type of the preamble
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum PreambleType {
+    /// A CEA-608 color.
     Color(Color),
+    /// White Italics.
     WhiteItalics,
+    /// No initial indentation.
     Indent0,
+    /// Cursor placed 4 characters from the left of the screen.
     Indent4,
+    /// Cursor placed 8 characters from the left of the screen.
     Indent8,
+    /// Cursor placed 12 characters from the left of the screen.
     Indent12,
+    /// Cursor placed 16 characters from the left of the screen.
     Indent16,
+    /// Cursor placed 20 characters from the left of the screen.
     Indent20,
+    /// Cursor placed 24 characters from the left of the screen.
     Indent24,
+    /// Cursor placed 28 characters from the left of the screen.
     Indent28,
 }
 
@@ -504,105 +625,204 @@ impl PreambleType {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 // must be ordered the same as the byte values for binary search to be successful
 pub enum Code {
+    /// Null value.  Used as padding.
     NUL,
+    /// Control code.
     Control(ControlCode),
+    /// (space)
     Space, // 0x20
+    /// !
     ExclamationMark,
+    /// "
     QuotationMark,
+    /// \#
     NumberSign,
+    /// $
     DollarSign,
+    /// %
     PercentSign,
+    /// &
     Ampersand,
+    /// '
     Apostrophe,
+    /// (
     LeftParenthesis,
+    /// )
     RightParenthesis,
+    /// á
     LatinLowerAWithAcute,
+    /// \+
     PlusSign,
+    /// ,
     Comma,
+    /// \-
     HyphenMinus,
+    /// .
     FullStop,
+    /// /
     Solidus,
+    /// 0
     Zero,
+    /// 1
     One,
+    /// 2
     Two,
+    /// 3
     Three,
+    /// 4
     Four,
+    /// 5
     Five,
+    /// 6
     Six,
+    /// 7
     Seven,
+    /// 8
     Eight,
+    /// 9
     Nine,
+    /// :
     Colon,
+    /// ;
     SemiColon,
+    /// <
     LessThan,
+    /// =
     Equals,
+    /// \>
     GreaterThan,
+    /// ?
     QuestionMark,
+    /// @
     CommercialAt,
+    /// A
     LatinCapitalA,
+    /// B
     LatinCapitalB,
+    /// C
     LatinCapitalC,
+    /// D
     LatinCapitalD,
+    /// E
     LatinCapitalE,
+    /// F
     LatinCapitalF,
+    /// G
     LatinCapitalG,
+    /// H
     LatinCapitalH,
+    /// I
     LatinCapitalI,
+    /// J
     LatinCapitalJ,
+    /// K
     LatinCapitalK,
+    /// L
     LatinCapitalL,
+    /// M
     LatinCapitalM,
+    /// N
     LatinCapitalN,
+    /// O
     LatinCapitalO,
+    /// P
     LatinCapitalP,
+    /// Q
     LatinCapitalQ,
+    /// R
     LatinCapitalR,
+    /// S
     LatinCapitalS,
+    /// T
     LatinCapitalT,
+    /// U
     LatinCapitalU,
+    /// V
     LatinCapitalV,
+    /// W
     LatinCapitalW,
+    /// X
     LatinCapitalX,
+    /// Y
     LatinCapitalY,
+    /// Z
     LatinCapitalZ,
+    /// [
     LeftSquareBracket,
+    /// é
     LatinLowerEWithAcute,
+    /// ]
     RightSquareBracket,
+    /// í
     LatinLowerIWithAcute,
+    /// ó
     LatinLowerOWithAcute,
+    /// ú
     LatinLowerUWithAcute,
+    /// a
     LatinLowerA,
+    /// b
     LatinLowerB,
+    /// c
     LatinLowerC,
+    /// d
     LatinLowerD,
+    /// e
     LatinLowerE,
+    /// f
     LatinLowerF,
+    /// g
     LatinLowerG,
+    /// h
     LatinLowerH,
+    /// i
     LatinLowerI,
+    /// j
     LatinLowerJ,
+    /// k
     LatinLowerK,
+    /// l
     LatinLowerL,
+    /// m
     LatinLowerM,
+    /// n
     LatinLowerN,
+    /// o
     LatinLowerO,
+    /// p
     LatinLowerP,
+    /// q
     LatinLowerQ,
+    /// r
     LatinLowerR,
+    /// s
     LatinLowerS,
+    /// t
     LatinLowerT,
+    /// u
     LatinLowerU,
+    /// v
     LatinLowerV,
+    /// w
     LatinLowerW,
+    /// x
     LatinLowerX,
+    /// y
     LatinLowerY,
+    /// z
     LatinLowerZ,
+    /// ç
     LatinLowerCWithCedilla,
+    /// ÷
     DivisionSign,
+    /// Ñ
     LatinCapitalNWithTilde,
+    /// ñ
     LatinLowerNWithTilde,
+    /// █
     SolidBlock, // 0x7F
 
+    /// An unknown value.
     Unknown(u8),
 }
 
