@@ -271,7 +271,7 @@ pub enum Control {
     LatinCapitalUWithDiaeseresis,
     /// ü
     LatinLowerUWithDiaeseresis,
-    /// ´
+    /// ‘
     OpeningSingleQuote,
     /// ¡
     InvertedExclamationMark,
@@ -643,7 +643,7 @@ pub enum Code {
     PercentSign,
     /// &
     Ampersand,
-    /// '
+    /// ’
     Apostrophe,
     /// (
     LeftParenthesis,
@@ -859,7 +859,7 @@ static CODE_MAP_TABLE: [CodeMap; 97] = [
     code_map_single_byte!(0x24, Code::DollarSign, Some('$')),
     code_map_single_byte!(0x25, Code::PercentSign, Some('%')),
     code_map_single_byte!(0x26, Code::Ampersand, Some('&')),
-    code_map_single_byte!(0x27, Code::Apostrophe, Some('\'')),
+    code_map_single_byte!(0x27, Code::Apostrophe, Some('’')),
     code_map_single_byte!(0x28, Code::LeftParenthesis, Some('(')),
     code_map_single_byte!(0x29, Code::RightParenthesis, Some(')')),
     code_map_single_byte!(0x2A, Code::LatinLowerAWithAcute, Some('á')),
@@ -944,7 +944,7 @@ static CODE_MAP_TABLE: [CodeMap; 97] = [
     code_map_single_byte!(0x78, Code::LatinLowerX, Some('x')),
     code_map_single_byte!(0x79, Code::LatinLowerY, Some('y')),
     code_map_single_byte!(0x7A, Code::LatinLowerZ, Some('z')),
-    code_map_single_byte!(0x7B, Code::LatinLowerCWithCedilla, Some('Ç')),
+    code_map_single_byte!(0x7B, Code::LatinLowerCWithCedilla, Some('ç')),
     code_map_single_byte!(0x7C, Code::DivisionSign, Some('÷')),
     code_map_single_byte!(0x7D, Code::LatinCapitalNWithTilde, Some('Ñ')),
     code_map_single_byte!(0x7E, Code::LatinLowerNWithTilde, Some('ñ')),
@@ -995,11 +995,11 @@ static CONTROL_MAP_TABLE: [ControlMap; 99] = [
         Some('Ü')
     ),
     control_map_bytes!([0x12, 0x25], Control::LatinLowerUWithDiaeseresis, Some('ü')),
-    control_map_bytes!([0x12, 0x26], Control::OpeningSingleQuote, Some('´')),
-    control_map_bytes!([0x12, 0x27], Control::InvertedExclamationMark, Some('´')),
+    control_map_bytes!([0x12, 0x26], Control::OpeningSingleQuote, Some('‘')),
+    control_map_bytes!([0x12, 0x27], Control::InvertedExclamationMark, Some('¡')),
     control_map_bytes!([0x12, 0x28], Control::Asterisk, Some('*')),
     control_map_bytes!([0x12, 0x29], Control::SingleOpenQuote, Some('\'')),
-    control_map_bytes!([0x12, 0x2a], Control::EmDash, Some('_')),
+    control_map_bytes!([0x12, 0x2a], Control::EmDash, Some('—')),
     control_map_bytes!([0x12, 0x2b], Control::CopyrightSign, Some('Ⓒ')),
     control_map_bytes!([0x12, 0x2c], Control::ServiceMarkSign, Some('℠')),
     control_map_bytes!([0x12, 0x2d], Control::RoundBullet, None),
@@ -1685,15 +1685,24 @@ mod test {
     }
 
     #[test]
-    fn test_control_code_from_char() {
+    fn control_code_to_from_char() {
         test_init_log();
-        assert_eq!(
-            Code::from_char('à', Channel::ONE),
-            Some(Code::Control(ControlCode {
+
+        for control in CONTROL_MAP_TABLE.iter() {
+            let Some(utf8) = control.utf8 else {
+                continue;
+            };
+
+            debug!("{control:?}");
+            let orig = Code::Control(ControlCode {
                 field: None,
                 channel: Channel::ONE,
-                control: Control::LatinLowerAWithGrave
-            }))
-        );
+                control: control.control,
+            });
+            assert_eq!(Some(utf8), orig.char());
+            let code = Code::from_char(utf8, Channel::ONE).unwrap();
+            assert_eq!(orig, code);
+            assert_eq!(Some(utf8), code.char());
+        }
     }
 }
