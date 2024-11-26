@@ -1646,6 +1646,7 @@ mod test {
 
     #[test]
     fn field2_control_to_from_bytes() {
+        test_init_log();
         let codes = [
             Control::ResumeCaptionLoading,
             Control::Backspace,
@@ -1685,6 +1686,7 @@ mod test {
 
     #[test]
     fn test_control_code_from_char() {
+        test_init_log();
         assert_eq!(
             Code::from_char('à', Channel::ONE),
             Some(Code::Control(ControlCode {
