@@ -442,8 +442,8 @@ impl Control {
     pub fn tab_offset(offset: u8) -> Option<Control> {
         match offset {
             1 => Some(Control::TabOffset1),
-            2 => Some(Control::TabOffset1),
-            3 => Some(Control::TabOffset1),
+            2 => Some(Control::TabOffset2),
+            3 => Some(Control::TabOffset3),
             _ => None,
         }
     }
