@@ -377,6 +377,9 @@ pub struct Cea608Writer {
 impl Cea608Writer {
     /// Push a [`Code`] into this writer
     pub fn push(&mut self, code: Code) {
+        if code == Code::NUL {
+            return;
+        }
         self.pending.push_front(code)
     }
 
@@ -757,6 +760,16 @@ mod test {
             let cea608 = state.decode(data).unwrap().unwrap();
             assert_eq!(cea608.into_code(Field::ONE)[0], code);
         }
+    }
+
+    #[test]
+    fn writer_ignore_padding() {
+        test_init_log();
+
+        let mut writer = Cea608Writer::default();
+        writer.push(Code::NUL);
+        writer.push(Code::LatinLowerA);
+        assert_eq!(writer.pop(), [0x61, 0x80]);
     }
 }
 
