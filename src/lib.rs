@@ -154,6 +154,113 @@ impl Cea608 {
             Self::DeleteToEndOfRow(chan) => *chan,
         }
     }
+
+    /// Convert into one or two [`Code`] values.
+    pub fn into_code(&self, field: Field) -> [Code; 2] {
+        match self {
+            Self::Text(text) => {
+                let mut ret = [Code::NUL, Code::NUL];
+                if let Some(char1) = text.char1 {
+                    ret[0] = Code::from_char(char1, text.channel).unwrap();
+                }
+                if let Some(char2) = text.char2 {
+                    ret[1] = Code::from_char(char2, text.channel).unwrap();
+                }
+                ret
+            }
+            Self::NewMode(chan, mode) => [
+                Code::Control(tables::ControlCode {
+                    field: Some(field),
+                    channel: *chan,
+                    control: match mode {
+                        Mode::RollUp2 => tables::Control::RollUp2,
+                        Mode::RollUp3 => tables::Control::RollUp3,
+                        Mode::RollUp4 => tables::Control::RollUp4,
+                        Mode::PaintOn => tables::Control::ResumeDirectionCaptioning,
+                        Mode::PopOn => tables::Control::ResumeCaptionLoading,
+                    },
+                }),
+                Code::NUL,
+            ],
+            Self::EraseDisplay(chan) => [
+                Code::Control(tables::ControlCode {
+                    field: Some(field),
+                    channel: *chan,
+                    control: tables::Control::EraseDisplayedMemory,
+                }),
+                Code::NUL,
+            ],
+            Self::EraseNonDisplay(chan) => [
+                Code::Control(tables::ControlCode {
+                    field: Some(field),
+                    channel: *chan,
+                    control: tables::Control::EraseNonDisplayedMemory,
+                }),
+                Code::NUL,
+            ],
+            Self::CarriageReturn(chan) => [
+                Code::Control(tables::ControlCode {
+                    field: Some(field),
+                    channel: *chan,
+                    control: tables::Control::CarriageReturn,
+                }),
+                Code::NUL,
+            ],
+            Self::Backspace(chan) => [
+                Code::Control(tables::ControlCode {
+                    field: Some(field),
+                    channel: *chan,
+                    control: tables::Control::Backspace,
+                }),
+                Code::NUL,
+            ],
+            Self::EndOfCaption(chan) => [
+                Code::Control(tables::ControlCode {
+                    field: Some(field),
+                    channel: *chan,
+                    control: tables::Control::EndOfCaption,
+                }),
+                Code::NUL,
+            ],
+            Self::TabOffset(chan, count) => [
+                Code::Control(tables::ControlCode {
+                    field: Some(field),
+                    channel: *chan,
+                    control: match count {
+                        1 => tables::Control::TabOffset1,
+                        2 => tables::Control::TabOffset2,
+                        3 => tables::Control::TabOffset3,
+                        _ => unreachable!(),
+                    },
+                }),
+                Code::NUL,
+            ],
+            Self::Preamble(chan, preamble) => [
+                Code::Control(tables::ControlCode {
+                    field: Some(field),
+                    channel: *chan,
+                    control: tables::Control::PreambleAddress(*preamble),
+                }),
+                Code::NUL,
+            ],
+            Self::MidRowChange(chan, midrow) => [
+                Code::Control(tables::ControlCode {
+                    field: Some(field),
+                    channel: *chan,
+                    control: tables::Control::MidRow(*midrow),
+                }),
+                Code::NUL,
+            ],
+            Self::DeleteToEndOfRow(chan) => [
+                Code::Control(tables::ControlCode {
+                    field: Some(field),
+                    channel: *chan,
+                    control: tables::Control::DeleteToEndOfRow,
+                }),
+                Code::NUL,
+            ],
+        }
+    }
 }
 
 /// Helper struct that has two purposes:
@@ -181,6 +288,7 @@ impl Cea608State {
             }
         }
         self.last_data = Some(data);
+        trace!("decoded into codes {code:x?}");
 
         // TODO: handle xds and text mode
 
@@ -278,17 +386,20 @@ impl Cea608Writer {
         let mut prev = None::<Code>;
 
         if let Some(code) = self.pending_code.take() {
+            trace!("returning pending code {code:?}");
             code.write_into(&mut ret);
             return ret;
         }
 
         while let Some(code) = self.pending.pop_back() {
             if let Some(prev) = prev {
+                trace!("have prev {prev:?}");
                 if code.byte_len() == 1 {
                     let mut data = [0; 2];
                     prev.write_into(&mut ret);
                     code.write_into(&mut data);
                     ret[1] = data[0];
+                    trace!("have 1 byte code {code:?}, returning {ret:x?}");
                     return ret;
                 } else if code.needs_backspace() {
                     self.pending_code = Some(code);
@@ -296,25 +407,30 @@ impl Cea608Writer {
                     prev.write_into(&mut ret);
                     Code::Space.write_into(&mut data);
                     ret[1] = data[0];
+                    trace!("have backspace needing code {code:?} stored as pending, pushing space with previous code {prev:?}");
                     return ret;
                 } else {
                     self.pending_code = Some(code);
                     prev.write_into(&mut ret);
+                    trace!("have two byte code {code:?} stored as pending, pushing space");
                     return ret;
                 }
             } else if code.needs_backspace() {
                 // all back space needing codes are 2 byte commands
                 self.pending_code = Some(code);
                 Code::Space.write_into(&mut ret);
+                trace!("have backspace needing code {code:?} stored as pending, pushing space");
                 return ret;
             } else if code.byte_len() == 1 {
                 prev = Some(code);
             } else {
+                trace!("have standalone 2 byte code {code:?}");
                 code.write_into(&mut ret);
                 return ret;
             }
         }
         if let Some(prev) = prev {
+            trace!("have no more pending codes, writing prev {prev:?}");
             prev.write_into(&mut ret);
         }
         ret
@@ -552,6 +668,95 @@ mod test {
         )));
         assert_eq!(writer.pop(), [0x91, 0x31]);
         assert_eq!(writer.pop(), [0x80, 0x80]);
+    }
+
+    #[test]
+    fn state_into_writer() {
+        test_init_log();
+        let stream = [[0x20, 0x80], [0x13, 0x2f], [0x80, 0x80]];
+        let mut state = Cea608State::default();
+        let mut writer = Cea608Writer::default();
+        for pair in stream {
+            let Some(cea608) = state.decode(pair).unwrap() else {
+                continue;
+            };
+            for code in cea608.into_code(Field::ONE) {
+                writer.push(code);
+            }
+        }
+        assert_eq!(writer.pop(), [0x20, 0x80]);
+        assert_eq!(writer.pop(), [0x13, 0x2f]);
+        assert_eq!(writer.pop(), [0x80, 0x80]);
+    }
+
+    #[test]
+    fn cea608_to_from_code() {
+        test_init_log();
+
+        let controls = [
+            tables::Control::ResumeCaptionLoading,
+            tables::Control::RollUp2,
+            tables::Control::RollUp3,
+            tables::Control::RollUp4,
+            tables::Control::EndOfCaption,
+            tables::Control::ResumeDirectionCaptioning,
+            tables::Control::tab_offset(1).unwrap(),
+            tables::Control::tab_offset(2).unwrap(),
+            tables::Control::tab_offset(3).unwrap(),
+            tables::Control::PreambleAddress(PreambleAddressCode::new(
+                3,
+                true,
+                tables::PreambleType::Indent4,
+            )),
+            tables::Control::EraseDisplayedMemory,
+            tables::Control::EraseNonDisplayedMemory,
+            tables::Control::CarriageReturn,
+            tables::Control::Backspace,
+            tables::Control::DeleteToEndOfRow,
+        ];
+        let controls_with_preceding_overwritten_char = [tables::Control::MidRow(
+            MidRow::new_color(tables::Color::Green, true),
+        )];
+
+        let codes = [Code::PercentSign, Code::LatinLowerA];
+
+        let mut writer = Cea608Writer::default();
+
+        let mut state = Cea608State::default();
+
+        for field in [Field::ONE, Field::TWO] {
+            for channel in [Channel::ONE, Channel::TWO] {
+                for control in controls {
+                    let code = Code::Control(ControlCode {
+                        field: Some(field),
+                        channel,
+                        control,
+                    });
+                    writer.push(code);
+                    let cea608 = state.decode(writer.pop()).unwrap().unwrap();
+                    assert_eq!(cea608.into_code(field)[0], code);
+                }
+                for control in controls_with_preceding_overwritten_char {
+                    let code = Code::Control(ControlCode {
+                        field: Some(field),
+                        channel,
+                        control,
+                    });
+                    writer.push(code);
+                    writer.pop(); // eat the preceding char
+                    let cea608 = state.decode(writer.pop()).unwrap().unwrap();
+                    assert_eq!(cea608.into_code(field)[0], code);
+                }
+            }
+        }
+
+        for code in codes {
+            debug!("pushing {code:?}");
+            writer.push(code);
+            let data = writer.pop();
+            let cea608 = state.decode(data).unwrap().unwrap();
+            assert_eq!(cea608.into_code(Field::ONE)[0], code);
+        }
     }
 }
 
