@@ -109,7 +109,7 @@ pub struct Text {
     pub channel: Channel,
 }
 
-/// CEA-08 information
+/// CEA-608 information
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Cea608 {
     /// Text
