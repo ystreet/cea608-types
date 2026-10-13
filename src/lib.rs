@@ -284,6 +284,7 @@ impl Cea608State {
         if Some(data) == self.last_data {
             if let Code::Control(_control) = code[0] {
                 debug!("Skipping duplicate");
+                self.last_data = None;
                 return Ok(None);
             }
         }
@@ -538,7 +539,6 @@ mod test {
     }
 
     #[test]
-    #[ignore = "the third of identical control codes is dropped as a repeat"]
     fn state_repeated_control_is_executed_once_per_pair() {
         test_init_log();
         let backspace = control_data(tables::Control::Backspace);
