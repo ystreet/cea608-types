@@ -969,7 +969,7 @@ macro_rules! control_map_bytes {
 }
 
 static CONTROL_MAP_TABLE: [ControlMap; 99] = [
-    control_map_bytes!([0x11, 0x30], Control::RegisteredTrademarkSign, Some('Ⓡ')),
+    control_map_bytes!([0x11, 0x30], Control::RegisteredTrademarkSign, Some('®')),
     control_map_bytes!([0x11, 0x31], Control::DegreeSign, Some('°')),
     control_map_bytes!([0x11, 0x32], Control::Fraction12, Some('½')),
     control_map_bytes!([0x11, 0x33], Control::InvertedQuestionMark, Some('¿')),
@@ -1000,9 +1000,9 @@ static CONTROL_MAP_TABLE: [ControlMap; 99] = [
     control_map_bytes!([0x12, 0x28], Control::Asterisk, Some('*')),
     control_map_bytes!([0x12, 0x29], Control::SingleOpenQuote, Some('\'')),
     control_map_bytes!([0x12, 0x2a], Control::EmDash, Some('—')),
-    control_map_bytes!([0x12, 0x2b], Control::CopyrightSign, Some('Ⓒ')),
+    control_map_bytes!([0x12, 0x2b], Control::CopyrightSign, Some('©')),
     control_map_bytes!([0x12, 0x2c], Control::ServiceMarkSign, Some('℠')),
-    control_map_bytes!([0x12, 0x2d], Control::RoundBullet, None),
+    control_map_bytes!([0x12, 0x2d], Control::RoundBullet, Some('•')),
     control_map_bytes!([0x12, 0x2e], Control::DoubleOpenQuote, Some('“')),
     control_map_bytes!([0x12, 0x2f], Control::DoubleCloseQuote, Some('”')),
     control_map_bytes!([0x12, 0x30], Control::LatinCapitalAWithGrave, Some('À')),
@@ -1064,15 +1064,15 @@ static CONTROL_MAP_TABLE: [ControlMap; 99] = [
     control_map_bytes!([0x13, 0x34], Control::LatinLowerSharpS, Some('ß')),
     control_map_bytes!([0x13, 0x35], Control::YenSign, Some('¥')),
     control_map_bytes!([0x13, 0x36], Control::GeneralCurrencySign, Some('¤')),
-    control_map_bytes!([0x13, 0x37], Control::VerticalBar, Some('¦')),
+    control_map_bytes!([0x13, 0x37], Control::VerticalBar, Some('│')),
     control_map_bytes!([0x13, 0x38], Control::LatinCapitalAWithRingAbove, Some('Å')),
     control_map_bytes!([0x13, 0x39], Control::LatinLowerAWithRingAbove, Some('å')),
     control_map_bytes!([0x13, 0x3a], Control::LatinCapitalOWithStroke, Some('Ø')),
     control_map_bytes!([0x13, 0x3b], Control::LatinLowerOWithStroke, Some('ø')),
-    control_map_bytes!([0x13, 0x3c], Control::UpperLeftBorder, None),
-    control_map_bytes!([0x13, 0x3d], Control::UpperRightBorder, None),
-    control_map_bytes!([0x13, 0x3e], Control::LowerLeftBorder, None),
-    control_map_bytes!([0x13, 0x3f], Control::LowerRightBorder, None),
+    control_map_bytes!([0x13, 0x3c], Control::UpperLeftBorder, Some('┌')),
+    control_map_bytes!([0x13, 0x3d], Control::UpperRightBorder, Some('┐')),
+    control_map_bytes!([0x13, 0x3e], Control::LowerLeftBorder, Some('└')),
+    control_map_bytes!([0x13, 0x3f], Control::LowerRightBorder, Some('┘')),
     control_map_bytes!([0x14, 0x20], Control::ResumeCaptionLoading, None),
     control_map_bytes!([0x14, 0x21], Control::Backspace, None),
     control_map_bytes!([0x14, 0x22], Control::AlarmOff, None),
@@ -1707,7 +1707,6 @@ mod test {
     }
 
     #[test]
-    #[ignore = "the bullet and the box corners have no character"]
     fn every_code_that_replaces_the_previous_character_has_a_character() {
         test_init_log();
 
