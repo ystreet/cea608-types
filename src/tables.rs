@@ -1335,7 +1335,7 @@ impl Code {
                         .cea608_bytes
                         .iter()
                         .map(|b| add_parity(*b))
-                        .chain([0x80, 0x80].into_iter())
+                        .chain([0x80, 0x80])
                         .enumerate()
                         .take(2)
                     {
