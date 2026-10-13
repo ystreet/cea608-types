@@ -1705,4 +1705,27 @@ mod test {
             assert_eq!(Some(utf8), code.char());
         }
     }
+
+    #[test]
+    #[ignore = "the bullet and the box corners have no character"]
+    fn every_code_that_replaces_the_previous_character_has_a_character() {
+        test_init_log();
+
+        // The extended characters are sent after a basic character that is the substitute for
+        // decoders that don't know them, and ask to replace it.  What is left on the screen is the
+        // substitute when there is no character for them.
+        for first in [0x11, 0x12, 0x13, 0x19, 0x1a, 0x1b] {
+            for second in 0x20..=0x3f {
+                let data = [add_parity(first), add_parity(second)];
+                let [code, _] = Code::from_data(data).unwrap();
+                let Code::Control(control) = code else {
+                    continue;
+                };
+                if matches!(control.control, Control::MidRow(_)) || !code.needs_backspace() {
+                    continue;
+                }
+                assert!(code.char().is_some(), "{data:x?} {control:?}");
+            }
+        }
+    }
 }
