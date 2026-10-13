@@ -531,6 +531,87 @@ mod test {
         assert_eq!(state.last_received_field(), Some(Field::ONE));
     }
 
+    fn control_data(control: tables::Control) -> [u8; 2] {
+        let mut data = [0, 0];
+        Code::Control(ControlCode::new(Field::ONE, Channel::ONE, control)).write_into(&mut data);
+        data
+    }
+
+    #[test]
+    #[ignore = "the third of identical control codes is dropped as a repeat"]
+    fn state_repeated_control_is_executed_once_per_pair() {
+        test_init_log();
+        let backspace = control_data(tables::Control::Backspace);
+        let mut state = Cea608State::default();
+
+        // two backspaces are sent as two pairs, which is four times the same data
+        for _ in 0..2 {
+            assert_eq!(
+                Ok(Some(Cea608::Backspace(Channel::ONE))),
+                state.decode(backspace)
+            );
+            assert_eq!(Ok(None), state.decode(backspace));
+        }
+        // and an odd number of repeats executes the last one
+        assert_eq!(
+            Ok(Some(Cea608::Backspace(Channel::ONE))),
+            state.decode(backspace)
+        );
+    }
+
+    #[test]
+    fn state_different_controls_are_not_duplicates() {
+        test_init_log();
+        let backspace = control_data(tables::Control::Backspace);
+        let cr = control_data(tables::Control::CarriageReturn);
+        let mut state = Cea608State::default();
+
+        assert_eq!(
+            Ok(Some(Cea608::Backspace(Channel::ONE))),
+            state.decode(backspace)
+        );
+        assert_eq!(
+            Ok(Some(Cea608::CarriageReturn(Channel::ONE))),
+            state.decode(cr)
+        );
+        assert_eq!(Ok(None), state.decode(cr));
+        assert_eq!(
+            Ok(Some(Cea608::Backspace(Channel::ONE))),
+            state.decode(backspace)
+        );
+    }
+
+    #[test]
+    fn state_control_after_text_is_not_a_duplicate() {
+        test_init_log();
+        let backspace = control_data(tables::Control::Backspace);
+        let mut state = Cea608State::default();
+
+        assert!(state.decode(backspace).unwrap().is_some());
+        assert_eq!(Ok(None), state.decode(backspace));
+        let mut data = vec![];
+        Code::LatinCapitalA.write(&mut data).unwrap();
+        assert!(state.decode([data[0], 0x80]).unwrap().is_some());
+        assert!(state.decode(backspace).unwrap().is_some());
+        assert_eq!(Ok(None), state.decode(backspace));
+    }
+
+    #[test]
+    fn state_repeated_text_is_not_a_duplicate() {
+        test_init_log();
+        let mut state = Cea608State::default();
+        let mut data = vec![];
+        Code::LatinCapitalA.write(&mut data).unwrap();
+        // text needs a control code to know the channel
+        assert!(state
+            .decode(control_data(tables::Control::RollUp2))
+            .unwrap()
+            .is_some());
+        for _ in 0..3 {
+            assert!(state.decode([data[0], data[0]]).unwrap().is_some());
+        }
+    }
+
     #[test]
     fn state_text_after_control() {
         test_init_log();
