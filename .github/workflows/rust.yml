@@ -26,10 +26,11 @@ jobs:
         toolchain: ${{ matrix.toolchain }}
         override: true
     - name: Use MSRV Cargo.lock
-      run: cp Cargo.lock.msrv Cargo.lock
+      run: cp Cargo.lock.msrv Cargo.lock && cargo build --verbose --locked
       if: matrix.toolchain == '1.71'
     - name: Build
       run: cargo build --verbose
+      if: matrix.toolchain != '1.71'
   test:
     runs-on: ubuntu-latest
     steps:
